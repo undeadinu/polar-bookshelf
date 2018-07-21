@@ -4,10 +4,10 @@ const {Optional} = require("../../Optional");
 const MAX_RESIZES = 25;
 
 /**
- * Listens to the main iframe load and resizes it appropriately based on the
+ * Listens to the main content load and resizes it appropriately based on the
  * scroll height of the document.
  *
- * The loader polls the content iframe every 50ms and if the height changes
+ * The loader polls the content frame every 50ms and if the height changes
  * automatically synchronizes it with the content document.  There's really no
  * way to get loading 'progress' so the trick is to just poll fast enough to get
  * the document size so that the user never notices.
@@ -20,18 +20,18 @@ class FrameResizer {
     //
     // https://stackoverflow.com/questions/1835219/is-there-an-event-that-fires-on-changes-to-scrollheight-or-scrollwidth-in-jquery
 
-    constructor(parent, iframe) {
+    constructor(parent, contentElement) {
 
         if(!parent) {
             throw new Error("No parent");
         }
 
-        if(!iframe) {
-            throw new Error("No iframe");
+        if(!contentElement) {
+            throw new Error("No contentElement");
         }
 
         this.parent = parent;
-        this.iframe = iframe;
+        this.contentElement = contentElement;
 
         this.completed = null;
 
@@ -100,6 +100,7 @@ class FrameResizer {
                                             .filter( current => current !== "")
                                             .getOrElse("0px"));
 
+        // FIXME: this should be contentDocument.documentElement.scrollHeight
         let newHeight = contentDocument.body.scrollHeight;
 
         let delta = Math.abs(newHeight - height);

@@ -164,10 +164,18 @@
 
 <!-- NOTE: 700px seems the minimum we can constrain to emulate a proper ipad -->
 
+<script>
+
+    window.setTimeout(() => {
+        let webview = document.querySelector("webview");
+        webview.setZoomLevel(1.0)
+    }, 1500);
+
+</script>
 
 <div id="viewerContainer" style="position:absolute; width: 100%;">
 	<!--<h1>Title</h1>-->
-    <div id="content-parent" style="width: 750px; transform: scale(1.0); transform-origin: center 0;">
+    <div id="content-parent" style="width: 750px;">
 
         <div class="page" data-page-number="1" style="width: 750px; min-height: 970px;">
             <!--<div id="click-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: orange; opacity: 0.5;">-->
@@ -181,7 +189,7 @@
 
 				<!-- TODO: we should consider using the electron webview element for this -->
 
-                <iframe src="about:blank" style="width: 750px; min-height: 970px;" frameborder="0" scrolling="no" id="content" referrerpolicy="no-referrer"></iframe>
+                <webview src="about:blank" style="width: 750px; min-height: 970px;" frameborder="0" scrolling="no" id="content" referrerpolicy="no-referrer" disablewebsecurity webpreferences="allowRunningInsecureContent"></webview>
 
                 <!-- TODO: this is a bit of a hack because the pagemarks system
                      listens to the page being redrawn to redraw the pagemarks and

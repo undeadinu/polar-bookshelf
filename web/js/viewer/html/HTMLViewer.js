@@ -2,7 +2,7 @@ const $ = require('jquery');
 const {Viewer} = require("../Viewer");
 const {FrameResizer} = require("./FrameResizer");
 const {FrameInitializer} = require("./FrameInitializer");
-const {IFrameWatcher} = require("./IFrameWatcher");
+const {ContentWatcher} = require("./ContentWatcher");
 const {HTMLFormat} = require("../../docformat/HTMLFormat");
 const log = require("../../logger/Logger").create();
 
@@ -22,21 +22,27 @@ class HTMLViewer extends Viewer {
 
         $(document).ready(() => {
 
+            log.info("Document is ready... ")
+
             this._captureBrowserZoom();
 
             this._loadRequestData();
 
             this._configurePageWidth();
+            this.startHandlingZoom();
+            new ContentWatcher(this.content, () => {
 
-            new IFrameWatcher(this.content, () => {
+                log.info("Loading page now...");
 
-                console.log("Loading page now...");
-
-                let frameResizer = new FrameResizer(this.contentParent, this.content);
-                frameResizer.start();
+                // let frameResizer = new FrameResizer(this.contentParent, this.content);
+                // frameResizer.start();
 
                 let frameInitializer = new FrameInitializer(this.content, this.textLayer);
-                frameInitializer.start();
+                //frameInitializer.start();
+
+                setTimeout(() => {
+                    frameInitializer.onLoad();
+                }, 1500)
 
                 this.startHandlingZoom();
 
@@ -80,6 +86,8 @@ class HTMLViewer extends Viewer {
     }
 
     startHandlingZoom() {
+
+        log.info("Starting to handle zoom.")
 
         let htmlViewer = this;
 
@@ -169,14 +177,15 @@ class HTMLViewer extends Viewer {
 
     _changeScale(scale) {
 
+        console.log("FIXME change scale: " + scale);
+
         // NOTE: removing the iframe and adding it back in fixed a major problem
         // with font fuzziness on Chrome/Electron.  Technically it should be
         // possible to resize the iframe via scale alone but I don't think
         // chrome re-renders the fonts unless significant scale changes are
         // made.
 
-        let iframe = document.querySelector("iframe");
-        let iframeParentElement = iframe.parentElement;
+        let contentElement = document.querySelector("#content");
 
         // TODO: we were experimenting with adding+removing the child iframes
         // but decided to back out the code as it was de-activating the iframes
@@ -184,8 +193,10 @@ class HTMLViewer extends Viewer {
 
         //iframeParentElement.removeChild(iframe);
 
-        let contentParent = document.querySelector("#content-parent");
-        contentParent.style.transform = `scale(${scale})`;
+        // let contentParent = document.querySelector("#content-parent");
+        // contentParent.style.transform = `scale(${scale})`;
+
+        contentElement.setZoomFactor(scale);
 
         //iframeParentElement.appendChild(iframe);
 

@@ -60,7 +60,8 @@ const BROWSER_WINDOW_OPTIONS = {
         // when loading fonts.  Once we resolve this we can enable webSecurity
         // again.
         webSecurity: false,
-        webaudio: false
+        webaudio: false,
+        zoomFactor: 1.0
     }
 };
 
@@ -728,3 +729,6 @@ app.on('activate', function() {
 app.on('open-file', function() {
     log.info("Open file called.");
 });
+
+
+console.log("FIXME userData: " + app.getPath("userData"));

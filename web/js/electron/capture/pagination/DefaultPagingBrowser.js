@@ -56,6 +56,7 @@ class DefaultPagingBrowser extends PagingBrowser {
                 },
 
                 scrollBox: {
+                    // TODO: should be document.documentElement.scroll(Width|Height)
                     width: document.body.scrollWidth,
                     height: document.body.scrollHeight,
                 },

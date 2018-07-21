@@ -79,7 +79,7 @@ class HTMLFormat extends DocFormat {
     }
 
     targetDocument() {
-        return document.querySelector("iframe").contentDocument;
+        return document.querySelector("#content").contentDocument;
     }
 
 }

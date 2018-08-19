@@ -17,14 +17,17 @@ class Rects {
 
     /**
      * Scale the rect based on the current values and the given scale.
+     * @param rect {Rect}
+     * @param scale {number}
      */
     static scale(rect, scale) {
 
         Preconditions.assertNotNull(rect, "rect");
+
         // make sure the input is valid before we work on it.
         rect = Rects.validate(rect);
 
-        rect = Objects.duplicate(rect);
+        rect = Object.assign(new Rect(), rect);
 
         for(let key in rect) {
 
@@ -42,6 +45,10 @@ class Rects {
     /**
      * Make sure the given rect has all the correct properties and then return
      * the rect.
+     *
+     * @param rect {Object} A rect-like object with the fields we need to work
+     *        with.  If it's not actually an instance of Rect we create a rect
+     *        and return that instead.
      *
      * @return {Rect}
      */
@@ -61,7 +68,11 @@ class Rects {
         Preconditions.assertNumber(rect.bottom, "bottom");
         Preconditions.assertNumber(rect.right, "right");
 
-        return rect;
+        if(! rect instanceof Rect) {
+            return new Rect(rect);
+        } else {
+            return rect;
+        }
 
     }
 
@@ -70,10 +81,12 @@ class Rects {
      * rect.
      *
      * @param point {Point}
+     * @param rect {Rect}
      */
     static relativeTo(point, rect) {
 
-        rect = Objects.duplicate(rect);
+        rect = Rects.validate(rect);
+        rect = Object.assign(new Rect(), rect);
 
         rect.left = rect.left + point.x;
         rect.top = rect.top + point.y;
@@ -96,10 +109,11 @@ class Rects {
      * x and y plane.  The dir.x and dir.y specify how much to move the rect.
      * @param absolute {boolean} When true, move to the absolute position, not
      *                           relative.
+     * @return {Rect}
      */
     static move(rect, dir, absolute) {
 
-        rect = Objects.duplicate(rect);
+        rect = Object.assign(new Rect(), rect);
 
         if(absolute) {
 
@@ -330,7 +344,7 @@ class Rects {
      */
     static createFromBasicRect(rect) {
 
-        rect = Objects.duplicate(rect);
+        rect = Object.assign(new Rect(), rect);
 
         // TODO: add x,y in the future.
 

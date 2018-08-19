@@ -1,35 +1,18 @@
-const {SerializedObject} = require("./SerializedObject.js");
-const {Preconditions} = require("../Preconditions");
-const {ExtendedAnnotation} = require("./ExtendedAnnotation");
-
-class BaseHighlight extends ExtendedAnnotation {
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const ExtendedAnnotation_1 = require("./ExtendedAnnotation");
+const Preconditions_1 = require("../Preconditions");
+class BaseHighlight extends ExtendedAnnotation_1.ExtendedAnnotation {
     constructor(val) {
         super(val);
-
-        /**
-         * The rectangles where we need to place content for this highlights.
-         *
-         * @type {{}}
-         */
         this.rects = {};
-
-        /**
-         * Optional thumbnail for this highlight.
-         * @type {null}
-         */
-        this.thumbnail = null;
-
     }
-
     validate() {
         super.validate();
-
-        Preconditions.assertNotNull(this.rects, "rects");
-        Preconditions.assertNotInstanceOf(this.rects, "rects", Array);
-    };
-
-};
-
-
-module.exports.BaseHighlight = BaseHighlight;
+        Preconditions_1.Preconditions.assertNotNull(this.rects, "rects");
+        Preconditions_1.Preconditions.assertNotInstanceOf(this.rects, "rects", Array);
+    }
+    ;
+}
+exports.BaseHighlight = BaseHighlight;
+//# sourceMappingURL=BaseHighlight.js.map

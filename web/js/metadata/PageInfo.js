@@ -1,28 +1,16 @@
-const {SerializedObject} = require("./SerializedObject.js");
-
-class PageInfo extends SerializedObject {
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const SerializedObject_1 = require("./SerializedObject");
+const Preconditions_1 = require("../Preconditions");
+class PageInfo extends SerializedObject_1.SerializedObject {
     constructor(val) {
-
         super(val);
-
-        /**
-         * The page number of this page.
-         *
-         * @type number.
-         */
-        this.num = null;
-
+        this.num = val.num;
         this.init(val);
-
     }
-
     validate() {
-        this.validateMembers([
-            {name: 'num', type: "number"}
-        ]);
+        Preconditions_1.Preconditions.assertNumber(this.num, "num");
     }
-
 }
-
-module.exports.PageInfo = PageInfo;
+exports.PageInfo = PageInfo;
+//# sourceMappingURL=PageInfo.js.map

@@ -51,15 +51,15 @@ class TextHighlightComponent extends Component {
 
     /**
      * @Override
-     * @param componentEvent
+     * @param annotationEvent
      */
-    init(componentEvent) {
+    init(annotationEvent) {
 
         // TODO: we should a specific event class for this data which is captured
-        // within a higher level componentEvent.
-        this.docMeta = componentEvent.docMeta;
-        this.textHighlight = componentEvent.textHighlight;
-        this.pageMeta = componentEvent.pageMeta;
+        // within a higher level annotationEvent.
+        this.docMeta = annotationEvent.docMeta;
+        this.textHighlight = annotationEvent.value;
+        this.pageMeta = annotationEvent.pageMeta;
 
         this.pageNum = this.pageMeta.pageInfo.num;
         this.pageElement = this.docFormat.getPageElementFromPageNum(this.pageNum);
@@ -85,6 +85,12 @@ class TextHighlightComponent extends Component {
             highlightElement.setAttribute("data-doc-fingerprint", this.docMeta.docInfo.fingerprint);
             highlightElement.setAttribute("data-text-highlight-id", this.textHighlight.id);
             highlightElement.setAttribute("data-page-num", `${this.pageMeta.pageInfo.num}`);
+
+            // annotation descriptor metadata.
+            highlightElement.setAttribute("data-annotation-type", "text-highlight");
+            highlightElement.setAttribute("data-annotation-id", this.textHighlight.id);
+            highlightElement.setAttribute("data-annotation-page-num", `${this.pageMeta.pageInfo.num}`);
+            highlightElement.setAttribute("data-annotation-doc-fingerprint", this.docMeta.docInfo.fingerprint);
 
             highlightElement.className = `text-highlight annotation text-highlight-${this.textHighlight.id}`;
 

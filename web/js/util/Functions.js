@@ -53,7 +53,7 @@ class Functions {
 
 
     /**
-     * We iterate over all keys in the dictionary.  Even inherited keys.
+     * We iterate over all keys in the dictionary.
      *
      * @param dict
      * @param callback
@@ -95,7 +95,7 @@ class Functions {
      * once the timeout has expired. You can then call .then() or just await
      * the timeout.
      *
-     * @param timeout
+     * @param timeout {number}
      * @return {Promise<void>}
      */
     static async waitFor(timeout) {

@@ -1,10 +1,11 @@
-const PagemarkRect = require("../../../metadata/PagemarkRect").PagemarkRect;
+const {PagemarkRect} = require("../../../metadata/PagemarkRect");
+const {AnnotationRects} = require("../../../metadata/AnnotationRects");
 const {PagemarkRects} = require("../../../metadata/PagemarkRects");
 const {Component} = require("../../../components/Component");
 const {DocFormatFactory} = require("../../../docformat/DocFormatFactory");
 const {Styles} = require("../../../util/Styles");
 const {Preconditions} = require("../../../Preconditions");
-const {BoxController} = require("../../../pagemarks/controller/interact/BoxController");
+const {BoxController} = require("../../../boxes/controller/BoxController");
 const {Rects} = require("../../../Rects");
 const {Optional} = require("../../../Optional");
 const log = require("../../../logger/Logger").create();
@@ -39,6 +40,10 @@ class AbstractPagemarkComponent extends Component {
          */
         this.annotationEvent = undefined;
 
+        /**
+         *
+         * @type {BoxController}
+         */
         this.pagemarkBoxController = undefined;
 
         this.options = {
@@ -57,7 +62,7 @@ class AbstractPagemarkComponent extends Component {
         this.annotationEvent = annotationEvent;
         this.pagemark = annotationEvent.value;
 
-        this.pagemarkBoxController = new BoxController(boxMoveEvent => this.onPagemarkMoved(boxMoveEvent));
+        this.pagemarkBoxController = new BoxController(boxMoveEvent => this.onBoxMoved(boxMoveEvent));
 
     }
 
@@ -65,7 +70,7 @@ class AbstractPagemarkComponent extends Component {
      *
      * @param boxMoveEvent {BoxMoveEvent}
      */
-    onPagemarkMoved(boxMoveEvent) {
+    onBoxMoved(boxMoveEvent) {
 
         // TODO: actually I think this belongs in the controller... not the view
         //
@@ -77,20 +82,17 @@ class AbstractPagemarkComponent extends Component {
 
         // boxRect, containerRect, pageRect...
 
-        let rect = PagemarkRects.createFromPositionedRect(boxMoveEvent.boxRect,
-                                                          boxMoveEvent.restrictionRect);
+        let annotationRect = AnnotationRects.createFromPositionedRect(boxMoveEvent.boxRect,
+                                                                      boxMoveEvent.restrictionRect);
+
+        let rect = new PagemarkRect(annotationRect);
 
         // FIXME: the lastUpdated here isn't being updated. I'm going to
         // have to change the setters I think..
 
         if (boxMoveEvent.state === "completed") {
 
-            // FIXME: this triggers an infinite loop....
-
             log.info("Box move completed.  Updating to trigger persistence.")
-
-            // TODO: this mode is too slow... I need a new BoxMoveEvent that
-            // signifies the state.. IE final or pending.
 
             let pagemark = Object.assign({}, this.pagemark);
             pagemark.percentage = rect.toPercentage();
@@ -118,6 +120,13 @@ class AbstractPagemarkComponent extends Component {
      *
      */
     render() {
+
+        // TODO: placemenElement should be called containerElement
+
+        // TODO: we should have pagemarkRect and positionedPagemarkRect too
+
+        // TODO: see of templateElement and placementElement are always the
+        //       same now.  They might be.
 
         //
         // - the options building can't be reliably tested
@@ -153,8 +162,8 @@ class AbstractPagemarkComponent extends Component {
             log.warn("Using a default placementElement from selector: ", placementElement);
         }
 
-        Preconditions.assertNotNull(templateElement, "templateElement")
-        Preconditions.assertNotNull(placementElement, "placementElement")
+        Preconditions.assertNotNull(templateElement, "templateElement");
+        Preconditions.assertNotNull(placementElement, "placementElement");
 
         console.log("Using templateElement: ", templateElement);
         console.log("Using placementElement: ", placementElement);
@@ -167,6 +176,7 @@ class AbstractPagemarkComponent extends Component {
         if(pagemarkElement === null ) {
             // only create the pagemark if it's missing.
             pagemarkElement = document.createElement("div");
+            pagemarkElement.setAttribute("id", id);
 
             placementElement.parentElement.insertBefore(pagemarkElement, placementElement);
 
@@ -174,7 +184,8 @@ class AbstractPagemarkComponent extends Component {
                 console.log("Creating box controller for pagemarkElement: ", pagemarkElement);
                 this.pagemarkBoxController.register({
                     target: pagemarkElement,
-                    restrictionElement: placementElement
+                    restrictionElement: placementElement,
+                    intersectedElementsSelector: ".pagemark"
                 });
             }
 
@@ -182,8 +193,19 @@ class AbstractPagemarkComponent extends Component {
 
         // set a pagemark-id in the DOM so that we can work with it when we use
         // the context menu, etc.
-        pagemarkElement.setAttribute("id", id);
+        // TODO: this is duplicated code across three places.. all major
+        // annotation components.
         pagemarkElement.setAttribute("data-pagemark-id", this.pagemark.id);
+        pagemarkElement.setAttribute("data-annotation-id", this.pagemark.id);
+        pagemarkElement.setAttribute("data-annotation-type", "pagemark");
+        pagemarkElement.setAttribute("data-annotation-doc-fingerprint", this.annotationEvent.docMeta.docInfo.fingerprint);
+        pagemarkElement.setAttribute("data-annotation-page-num", `${this.annotationEvent.pageMeta.pageInfo.num}`);
+
+
+        pagemarkElement.setAttribute("data-type", "pagemark");
+        pagemarkElement.setAttribute("data-doc-fingerprint", this.annotationEvent.docMeta.docInfo.fingerprint);
+        pagemarkElement.setAttribute("data-page-num", `${this.annotationEvent.pageMeta.pageInfo.num}`);
+
 
         // make sure we have a reliable CSS classname to work with.
         pagemarkElement.className="pagemark annotation";
@@ -194,6 +216,8 @@ class AbstractPagemarkComponent extends Component {
 
         pagemarkElement.style.position="absolute";
 
+        // TODO: we don't actually need the placement rect.. just the dimensions
+        // of the container.
         let placementRect = this.createPlacementRect(placementElement);
         let pagemarkRect = this.toOverlayRect(placementRect, this.pagemark);
 
@@ -204,7 +228,7 @@ class AbstractPagemarkComponent extends Component {
         pagemarkElement.style.top = `${pagemarkRect.top}px`;
         pagemarkElement.style.width = `${pagemarkRect.width}px`;
         pagemarkElement.style.height = `${pagemarkRect.height}px`;
-        pagemarkElement.style.zIndex = '1';
+        pagemarkElement.style.zIndex = '9';
 
     }
 
@@ -261,11 +285,6 @@ class AbstractPagemarkComponent extends Component {
      * @return {Rect}
      */
     toOverlayRect(placementRect, pagemark) {
-
-        // FIXME: this doesn't yet support the legacy pagemarks without rects...
-        //
-        //
-
         let pagemarkRect = new PagemarkRect(pagemark.rect);
 
         let overlayRect = pagemarkRect.toDimensions(placementRect.dimensions);

@@ -1,11 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 class Viewer {
-
-    start() {}
-
-    changeScale(scale) {
-        throw new Error("Not supported by this viewer.")
+    start() {
     }
-
+    changeScale(scale) {
+        throw new Error("Not supported by this viewer.");
+    }
+    docDetails() {
+        return {};
+    }
 }
-
-module.exports.Viewer = Viewer;
+exports.Viewer = Viewer;
+//# sourceMappingURL=Viewer.js.map

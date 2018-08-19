@@ -5,9 +5,10 @@ const convertStream = require("convert-stream");
 
 /** @type {Electron.Net} */
 const net = electron.net;
-const BrowserWindow = electron.BrowserWindow;
+const {Logger} = require("../../logger/Logger");
 
-const log = require("../../logger/Logger").create();
+const log = Logger.create();
+
 
 class CacheInterceptorService {
 
@@ -31,13 +32,13 @@ class CacheInterceptorService {
 
         ++this.cacheStats.hits;
 
-        log.debug("Going to handle with cache: ", request.url);
+        log.info("HIT Going to handle with cache: ", request.url);
 
         let cacheEntry = this.cacheRegistry.get(request.url);
 
         let buffer = await cacheEntry.toBuffer();
 
-        log.debug(`Calling callback now for: ${request.url} (${buffer.byteLength} bytes)`);
+        log.info(`Calling callback now for: ${request.url} (${buffer.byteLength} bytes)`);
 
         callback({
             mimeType: cacheEntry.mimeType,
@@ -57,7 +58,7 @@ class CacheInterceptorService {
             url: request.url,
         };
 
-        log.debug("Going to handle with net.request: " + request.url);
+        log.info("MISS Going to handle with net.request: " + request.url);
 
         let netRequest = net.request(options)
             .on('response', async (response) => {
@@ -91,8 +92,18 @@ class CacheInterceptorService {
 
         Object.keys(request.headers).forEach(header => {
             // call setHeader for each header needed.
+            log.info("Setting request header: ", header);
             netRequest.setHeader(header, request.headers[header]);
         });
+
+        if(request.uploadData) {
+
+            log.info("Writing data to request");
+            request.uploadData.forEach(current => {
+                netRequest.write(current.bytes);
+            });
+
+        }
 
         // TODO: we have to call netRequest.write on all the request.uploadData.
         // not urgent because this isn't really a use case we must support.
@@ -114,6 +125,7 @@ class CacheInterceptorService {
     };
 
     async interceptBufferProtocol(scheme, func) {
+
         return new Promise((resolve, reject) => {
 
             protocol.interceptBufferProtocol(scheme, func, (error) => {
@@ -127,9 +139,12 @@ class CacheInterceptorService {
             });
 
         });
+
     }
 
     async start() {
+
+        log.info("Starting service and registering protocol interceptors.");
 
         await this.interceptBufferProtocol('http', this.interceptRequest.bind(this));
         await this.interceptBufferProtocol('https', this.interceptRequest.bind(this));

@@ -1,7 +1,8 @@
+
 const electron = require('electron');
 const fspath = require('path');
 const url = require('url');
-const CacheInterceptorService = require("./web/js/backend/interceptor/CacheInterceptorService").CacheInterceptorService;
+const {CacheInterceptorService} = require("./web/js/backend/interceptor/CacheInterceptorService");
 const {Directories} = require("./web/js/datastore/Directories");
 const {DiskDatastore} = require("./web/js/datastore/DiskDatastore");
 const {MemoryDatastore} = require("./web/js/datastore/MemoryDatastore");
@@ -27,23 +28,29 @@ const {CacheRegistry} = require("./web/js/backend/proxyserver/CacheRegistry");
 
 const {Cmdline} = require("./web/js/electron/Cmdline");
 const {Paths} = require("./web/js/util/Paths");
+const {Services} = require("./web/js/util/services/Services");
 const {Fingerprints} = require("./web/js/util/Fingerprints");
 const {Files} = require("./web/js/util/Files");
 const {ElectronContextMenu} = require("./web/js/contextmenu/electron/ElectronContextMenu");
 const {CaptureController} = require("./web/js/capture/controller/CaptureController");
+const {GA} = require("./web/js/ga/GA");
 
 const searchInPage = require('electron-in-page-search').default;
+const {DialogWindowService} = require("./web/js/ui/dialog_window/DialogWindowService");
 
-const options = { extraHeaders: 'pragma: no-cache\nreferer: http://cnn.com\n' };
+//const options = { extraHeaders: 'pragma: no-cache\nreferer: http://cnn.com\n' };
 
 const log = Logger.create();
 
+const WIDTH = 800 * 1.2;
+const HEIGHT = 1100 * 1.2;
+
 const BROWSER_WINDOW_OPTIONS = {
     backgroundColor: '#FFF',
-    minWidth: 400,
-    minHeight: 300,
-    width: 1280,
-    height: 1024,
+    minWidth: WIDTH * 0.4,
+    minHeight: HEIGHT * 0.4,
+    width: WIDTH,
+    height: HEIGHT,
     show: false,
     // https://electronjs.org/docs/api/browser-window#new-browserwindowoptions
     icon: app_icon,
@@ -61,7 +68,12 @@ const BROWSER_WINDOW_OPTIONS = {
         // again.
         webSecurity: false,
         webaudio: false,
-        zoomFactor: 1.0
+
+        /**
+         * Use a persistent cookie session between restarts.  This is used so
+         * that we keep user cookies including Google Analytics cookies.
+         */
+        //partition: "persist:polar"
     }
 };
 
@@ -74,7 +86,7 @@ const WEBSERVER_PORT = 8500;
 const PROXYSERVER_PORT = 8600;
 
 const DEFAULT_HOST = "127.0.0.1";
-const DEFAULT_URL = `http://${DEFAULT_HOST}:${WEBSERVER_PORT}/default.html`;
+const DEFAULT_URL = `file://${__dirname}/apps/home/default.html`;
 
 //creating menus for menu bar
 const MENU_TEMPLATE = [{
@@ -146,13 +158,16 @@ const MENU_TEMPLATE = [{
     {
         label: 'Edit',
         submenu: [
-            { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-            { label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
+            { role: 'undo' },
+            { role: 'redo' },
             // { type: 'separator' },
             // { label: 'Find', accelerator: 'CmdOrCtrl+f', click: cmdFind },
             { type: 'separator' },
-            { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
-            { label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectall' },
+            { role: 'cut'},
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'pasteandmatchstyle' },
+            { role: 'selectall' },
             { type: 'separator' },
             // {
             //     label: 'Change Pagemark Column Type',
@@ -219,15 +234,19 @@ const MENU_TEMPLATE = [{
                     });
                 }
             },
+            { label: 'Discord', click: function() { shell.openExternal('https://discord.gg/GT8MhA6'); } },
+            { label: 'Reddit', click: function() { shell.openExternal('https://www.reddit.com/r/PolarBookshelf/'); } },
             { label: 'Learn More', click: function() { shell.openExternal('https://github.com/burtonator/polar-bookshelf'); } },
         ]
     },
 ];
 
-function createWindow() {
+async function createWindow(browserWindowOptions = BROWSER_WINDOW_OPTIONS, url=DEFAULT_URL) {
+
+    log.info("Creating window for URL: ", url);
 
     // Create the browser window.
-    let newWindow = new BrowserWindow(BROWSER_WINDOW_OPTIONS);
+    let newWindow = new BrowserWindow(browserWindowOptions);
 
     newWindow.on('close', function(e) {
         e.preventDefault();
@@ -242,7 +261,8 @@ function createWindow() {
         if(BrowserWindow.getAllWindows().length === 0) {
             // determine if we need to quit:
             log.info("No windows left. Quitting app.");
-            app.quit();
+
+            exitApp();
 
         }
 
@@ -260,21 +280,27 @@ function createWindow() {
     // });
 
     newWindow.webContents.on('will-navigate', function(e, url) {
+        log.info("Attempt to navigate to new URL: ", url);
         // required to force the URLs clicked to open in a new browser.  The
         // user probably / certainly wants to use their main browser.
         e.preventDefault();
         shell.openExternal(url);
     });
 
-    newWindow.loadURL(DEFAULT_URL, options);
+    log.info("Loading URL: ", url);
+    newWindow.loadURL(url);
 
-    newWindow.once('ready-to-show', () => {
-        //newWindow.maximize();
-        newWindow.show();
+    return new Promise(resolve => {
 
-    });
+        newWindow.once('ready-to-show', () => {
 
-    return newWindow;
+            newWindow.show();
+
+            resolve(newWindow);
+
+        });
+
+    })
 
 }
 
@@ -299,8 +325,23 @@ function consoleListener(event, level, message, line, sourceId) {
     log.info(`level=${level} ${sourceId}:${line}: ${message}`);
 }
 
-function cmdNewWindow(item, focusedWindow) {
-    createWindow();
+async function cmdNewWindow(item, focusedWindow) {
+    await createWindow();
+}
+
+function exitApp() {
+
+    log.info("Exiting app...");
+
+    Services.stop({ webserver, proxyServer });
+
+    log.info("Exiting electron...");
+
+    app.quit();
+
+    log.info("Exiting main...");
+    process.exit();
+
 }
 
 /**
@@ -372,9 +413,11 @@ async function loadDoc(path, targetWindow) {
 
     if(path.endsWith(".pdf")) {
 
+        appAnalytics.screen("pdfviewer");
+
         // FIXME: Use a PHZ loader for this.
 
-        url = `http://${DEFAULT_HOST}:${WEBSERVER_PORT}/pdfviewer/web/viewer.html?file=${fileParam}`;
+        url = `file://${__dirname}/pdfviewer/web/viewer.html?file=${fileParam}`;
 
     } else if(path.endsWith(".chtml")) {
 
@@ -410,9 +453,11 @@ async function loadDoc(path, targetWindow) {
         // metadata / descriptors
         let fingerprint = Fingerprints.create(basename);
 
-        url = `http://${DEFAULT_HOST}:${WEBSERVER_PORT}/htmlviewer/index.html?file=${encodeURIComponent(cacheMeta.url)}&fingerprint=${fingerprint}&descriptor=${encodeURIComponent(descriptorJSON)}`;
+        url = `file://${__dirname}/htmlviewer/index.html?file=${encodeURIComponent(cacheMeta.url)}&fingerprint=${fingerprint}&descriptor=${encodeURIComponent(descriptorJSON)}`;
 
     } else if(path.endsWith(".phz")) {
+
+        appAnalytics.screen("htmlviewer");
 
         // FIXME: this should use the new PHZLoader.  There's a duplication of code there otherwise.
 
@@ -426,7 +471,7 @@ async function loadDoc(path, targetWindow) {
 
         let cachedRequest = cachedRequestsHolder.cachedRequests[cachedRequestsHolder.metadata.url];
 
-        console.log("Going to load URL: " + cachedRequest.url);
+        log.info("Going to load URL: " + cachedRequest.url);
 
         descriptor = cachedRequestsHolder.metadata;
         let descriptorJSON = JSON.stringify(descriptor);
@@ -439,11 +484,10 @@ async function loadDoc(path, targetWindow) {
         // metadata / descriptors
         let fingerprint = Fingerprints.create(basename);
 
-        url = `http://${DEFAULT_HOST}:${WEBSERVER_PORT}/htmlviewer/index.html?file=${encodeURIComponent(cachedRequest.url)}&fingerprint=${fingerprint}&descriptor=${encodeURIComponent(descriptorJSON)}`;
+        url = `file://${__dirname}/htmlviewer/index.html?file=${encodeURIComponent(cachedRequest.url)}&fingerprint=${fingerprint}&descriptor=${encodeURIComponent(descriptorJSON)}`;
 
     }
 
-    log.info("Loading URL: " + url);
 
     if(cacheMeta) {
 
@@ -458,20 +502,15 @@ async function loadDoc(path, targetWindow) {
 
     }
 
-    //return;
-    targetWindow.loadURL(url, options);
+    log.info("Loading webapp at: " + url);
+    targetWindow.loadURL(url);
 
     if(args.enableConsoleLogging) {
         log.info("Console logging enabled.");
         targetWindow.webContents.on("console-message", consoleListener);
     }
 
-    targetWindow.webContents.on('did-finish-load', function() {
-
-        log.info("Finished loading. Now injecting customizations.");
-        log.info("Toggling dev tools...");
-        //targetWindow.toggleDevTools();
-
+    targetWindow.webContents.once('did-finish-load', function() {
 
         if(descriptor && descriptor.title) {
             // TODO: this should be driven from the DocMeta and the DocMeta
@@ -496,7 +535,7 @@ function cmdFind() {
 }
 
 function cmdToggleDevTools(item, focusedWindow) {
-    console.log("Toggling dev tools in: " + focusedWindow);
+    log.info("Toggling dev tools in: " + focusedWindow);
     focusedWindow.toggleDevTools();
 }
 
@@ -517,7 +556,7 @@ async function cmdOpenInNewWindow(item, focusedWindow) {
 
     let path = await promptDoc();
 
-    let targetWindow = createWindow();
+    let targetWindow = await createWindow(BROWSER_WINDOW_OPTIONS, "about:blank");
 
     await loadDoc(path, targetWindow);
 
@@ -525,15 +564,23 @@ async function cmdOpenInNewWindow(item, focusedWindow) {
 
 async function cmdCaptureWebPage(item, focusedWindow) {
 
-    let targetWindow = createWindow();
+    let browserWindowOptions = Object.assign({}, BROWSER_WINDOW_OPTIONS);
 
-    let url = 'http://127.0.0.1:8500/apps/capture/start-capture/index.html';
-    targetWindow.loadURL(url);
+    browserWindowOptions.width = browserWindowOptions.width * .9;
+    browserWindowOptions.height = browserWindowOptions.height * .9;
+    browserWindowOptions.center = true;
+
+    let targetWindow = await createWindow(browserWindowOptions);
+
+    // TODO: move to AppPaths here... loadFile does not work reliably.
+
+    let url = './apps/capture/start-capture/index.html';
+    targetWindow.loadFile(url);
 
 }
 
 function cmdExit() {
-    app.quit();
+    exitApp();
 }
 
 /**
@@ -546,7 +593,7 @@ async function openFileCmdline(path, createNewWindow) {
     log.info("Opening file given on the command line: " + path);
 
     if(createNewWindow) {
-        await loadDoc(path, createWindow());
+        await loadDoc(path, await createWindow());
     } else {
         await loadDoc(path, mainWindow);
     }
@@ -584,6 +631,8 @@ let quitapp, URL;
 let args = parseArgs();
 let datastore = null;
 
+// TODO: there needs to be a similar concept of the Loader for the main process.
+
 const webserverConfig = new WebserverConfig(app.getAppPath(), WEBSERVER_PORT);
 const fileRegistry = new FileRegistry(webserverConfig);
 
@@ -593,6 +642,14 @@ const cacheRegistry = new CacheRegistry(proxyServerConfig);
 const directories = new Directories();
 
 let captureController = new CaptureController({directories, cacheRegistry});
+
+let dialogWindowService = new DialogWindowService();
+
+let appAnalytics = GA.getAppAnalytics();
+
+let webserver;
+
+let proxyServer;
 
 directories.init().then(async () => {
 
@@ -615,18 +672,19 @@ directories.init().then(async () => {
 
     // *** start the webserver
 
-    const webserver = new Webserver(webserverConfig, fileRegistry);
+    webserver = new Webserver(webserverConfig, fileRegistry);
     webserver.start();
 
     // *** start the proxy server
 
-    const proxyServer = new ProxyServer(proxyServerConfig, cacheRegistry);
+    proxyServer = new ProxyServer(proxyServerConfig, cacheRegistry);
     proxyServer.start();
 
     let cacheInterceptorService = new CacheInterceptorService(cacheRegistry);
     await cacheInterceptorService.start();
 
     await captureController.start();
+    await dialogWindowService.start();
 
     log.info("Running with process.args: ", JSON.stringify(process.argv));
 
@@ -662,6 +720,9 @@ let shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) 
 
     log.info("Second instance asked to load.");
 
+    // TODO: I think this is wrong and we should open up a new window not
+    // focus the existing window.
+
     if(! handleCmdLinePDF(commandLine, true)) {
 
         if (mainWindow) {
@@ -675,11 +736,12 @@ let shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) 
 
 if (shouldQuit) {
     log.info("Quiting.  App is single instance.");
-    app.quit();
-    return;
+    exitApp();
 }
 
 app.on('ready', async function() {
+
+    log.info("Loaded from: ", app.getAppPath());
 
     contextMenu = Menu.buildFromTemplate([
         { label: 'Minimize', type: 'radio', role: 'minimize' },
@@ -700,13 +762,13 @@ app.on('ready', async function() {
     //appIcon.setToolTip('Polar Bookshelf');
     //appIcon.setContextMenu(contextMenu);
 
-    mainWindow = createWindow();
+    mainWindow = await createWindow();
 
     // start the context menu system.
     new ElectronContextMenu();
 
     if(args.enableDevTools) {
-        mainWindow.toggleDevTools();
+        mainWindow.webContents.toggleDevTools();
     }
 
     // if there is a PDF file to open, load that, otherwise, load the default URL.
@@ -717,18 +779,25 @@ app.on('ready', async function() {
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function() {
-    if (process.platform !== 'darwin') { app.quit(); }
+    if (process.platform !== 'darwin') { exitApp(); }
 });
 
-app.on('activate', function() {
+app.on('activate', async function() {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (mainWindow === null) { createWindow(); }
+    if (mainWindow === null) { await createWindow(); }
+
 });
 
-app.on('open-file', function() {
-    log.info("Open file called.");
+app.on('open-file', (event, path) => {
+
+    // TODO: the OS requested a file opened.  We're not testing this right
+    // now but it should work.
+
+    log.info("Open file called for: ", path);
+
+    handleCmdLinePDF(path, false)
+        .catch((err) => log.error(err));
+
 });
 
-
-console.log("FIXME userData: " + app.getPath("userData"));

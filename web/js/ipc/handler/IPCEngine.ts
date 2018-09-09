@@ -9,16 +9,16 @@ const log = Logger.create();
 
 export class IPCEngine<E extends IPCEvent> {
 
-    private readonly pipe: IPCPipe<E>;
-
     public readonly registry: IPCRegistry;
+
+    private readonly pipe: IPCPipe<E>;
 
     constructor(pipe: IPCPipe<E>, registry: IPCRegistry) {
         this.pipe = pipe;
         this.registry = registry;
     }
 
-    start() {
+    public start() {
 
         this.registry.entries().forEach(ipcRegistration => {
 
@@ -26,9 +26,9 @@ export class IPCEngine<E extends IPCEvent> {
 
                 (async () => {
 
-                    let event = pipeNotification.event;
+                    const event = pipeNotification.event;
 
-                    let ipcRequest = IPCMessage.create(pipeNotification.message);
+                    const ipcRequest = IPCMessage.create(pipeNotification.message);
 
                     let ipcResponse: IPCMessage<any>;
 
@@ -36,7 +36,7 @@ export class IPCEngine<E extends IPCEvent> {
 
                         let result =  await ipcRegistration.handler.handle(event, ipcRequest);
 
-                        if( ! result) {
+                        if ( ! result) {
                             // we don't have a result given to us from the handler
                             // we just return true in this situation.
                             result = true;
@@ -46,14 +46,14 @@ export class IPCEngine<E extends IPCEvent> {
 
                         // TODO: if the result is a promise, await the promise...
 
-                    } catch(err) {
+                    } catch (err) {
 
                         log.error("Encountered error with handler: ", err);
 
                         // catch any exceptions so that handlers don't have to be
                         // responsible for error handling by default.
 
-                        ipcResponse = IPCMessage.createError('error', new IPCError(err));
+                        ipcResponse = IPCMessage.createError('error', IPCError.create(err));
 
                     }
 
@@ -68,7 +68,7 @@ export class IPCEngine<E extends IPCEvent> {
 
             });
 
-        })
+        });
 
     }
 

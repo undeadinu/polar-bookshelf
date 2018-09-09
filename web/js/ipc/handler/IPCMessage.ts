@@ -6,6 +6,7 @@ import {IPCError} from './IPCError';
 import {ElectronContext} from './ElectronContext';
 import {ElectronContexts} from './ElectronContexts';
 import {Logger} from '../../logger/Logger';
+import {isPresent} from '../../Preconditions';
 
 const log = Logger.create();
 
@@ -49,8 +50,8 @@ export class IPCMessage<T> {
 
     get value(): T {
 
-        if(this._error) {
-            throw new Error(this._error.msg);
+        if (this._error) {
+            throw new Error(this._error.message);
         }
 
         if(! this._value) {
@@ -81,9 +82,36 @@ export class IPCMessage<T> {
         return Date.now();
     }
 
-    static createError<T>(type: string, error: IPCError): IPCMessage<T> {
+    public static createError<T>(type: string, error: IPCError): IPCMessage<T> {
         return new IPCMessage<T>(type, undefined, IPCMessage.createNonce(), error);
     }
+
+    // public static create<T>(obj: any, valueFactory?: ValueFactory<T> ): IPCMessage<T> {
+    //
+    //     if (obj._value === undefined) {
+    //         log.warn("IPC message missing value: ", obj);
+    //     }
+    //
+    //     // obj._value = Optional.of(obj._value, "value")
+    //     //     .getOrUndefined();
+    //     //
+    //     // if (isPresent(obj._value) && valueFactory) {
+    //     //     obj._value = valueFactory(obj._value);
+    //     // }
+    //
+    //     // require the value.
+    //     obj._value = Optional.of(obj._value, "value").get();
+    //
+    //     if(valueFactory) {
+    //         obj._value = valueFactory(obj._value);
+    //     }
+    //
+    //     const result: IPCMessage<T> = Object.create(IPCMessage.prototype);
+    //     Object.assign(result, obj);
+    //
+    //     return result;
+    //
+    // }
 
     static create<T>(obj: any, valueFactory?: ValueFactory<T> ): IPCMessage<T> {
 
@@ -104,7 +132,6 @@ export class IPCMessage<T> {
         return result;
 
     }
-
 }
 
 interface ValueFactory<T> {

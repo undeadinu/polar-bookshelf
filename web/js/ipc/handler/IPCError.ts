@@ -1,20 +1,24 @@
 /**
  * Represents the fact that an IPC error failed.
  */
+import {Preconditions} from '../../Preconditions';
+
 export class IPCError {
 
-    public readonly msg: string;
+    public readonly message: string;
 
-    constructor(msg: string) {
-        this.msg = msg;
+    private constructor(message: string) {
+        Preconditions.assertString(message, 'msg');
+        this.message = message;
     }
 
-    public static create(obj: any): IPCError {
+    public static create(err: Error | string): IPCError {
 
-        let result: IPCError = Object.create(IPCError.prototype);
-        Object.assign(result, obj);
+        if (err instanceof Error) {
+            return new IPCError(err.message);
+        }
 
-        return result;
+        return new IPCError(err);
 
     }
 

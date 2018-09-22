@@ -64,15 +64,23 @@
             background-position: 50%;
         }
 
-        .split.split-horizontal, .gutter.gutter-horizontal {
+        .split.split-horizontal,
+        .gutter.gutter-horizontal {
             height: 100%;
-            float: left;
+            /*float: left;*/
         }
 
-        /*#three, #four {*/
-            /*display: flex;*/
-            /*flex-direction: column;*/
-        /*}*/
+        .api {
+            display: table;
+        }
+
+        #three,
+        #four {
+            display: table-cell;
+            vertical-align: top;
+        }
+
+        /* FIXME: this works as table cells BUT the calc can't be set properly. */
 
     </style>
 </head>

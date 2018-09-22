@@ -33,7 +33,24 @@
     background-position: 50%;
 }
 
-.split.split-horizontal, .gutter.gutter-horizontal {
+#polar-root {
+    display: table;
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.split.split-horizontal {
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    display: table-cell;
+    vertical-align: top;
+}
+
+.gutter.gutter-horizontal {
     height: 100%;
     float: left;
 }

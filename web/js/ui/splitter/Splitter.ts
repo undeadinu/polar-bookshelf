@@ -26,8 +26,17 @@ export class Splitter {
 
         this.split = Split([this.left, this.right], {
             sizes: INITIAL_SIZES,
-            minSize: 250,
-            gutterSize: 7
+            minSize: 0,
+            gutterSize: 7,
+            elementStyle: (dimension: 'width' | 'height', elementSize: number, gutterSize: number) => {
+
+                elementSize = Math.floor(elementSize);
+
+                console.log("Setting to width: " + elementSize);
+                return {
+                    width: `${elementSize}%`
+                };
+            },
         });
 
         this.sizes = INITIAL_SIZES;

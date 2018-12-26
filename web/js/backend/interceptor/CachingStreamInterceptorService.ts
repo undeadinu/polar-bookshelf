@@ -30,7 +30,7 @@ export class CachingStreamInterceptorService {
 
             await Protocols.interceptStreamProtocol(this.protocol, scheme, (request, callback) => {
 
-                StreamInterceptors.withSetTimeout(() => {
+                StreamInterceptors.withDirectCall(() => {
                     this.cachingStreamInterceptor.intercept(request, callback);
                 });
 

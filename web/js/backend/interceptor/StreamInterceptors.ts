@@ -36,6 +36,15 @@ export class StreamInterceptors {
 
     }
 
+    /**
+     * Call the delegate directly.
+     *
+     *
+     */
+    public static withDirectCall(delegate: () => void) {
+        delegate();
+    }
+
     public static handleWithNetRequest(request: InterceptStreamProtocolRequest, callback: StreamProtocolCallback) {
 
         log.debug("Handling request: ", request.url);

@@ -1,13 +1,26 @@
 import {BrowserWindow} from 'electron';
 import {Sets} from '../../util/Sets';
 import {Dictionaries} from '../../util/Dictionaries';
+import {Latch} from '../../util/Latch';
 
-export class BrowserWindowMeta {
+export interface BrowserWindowMeta {
+
+    readonly id: Latch<number>;
 
     /**
      * Set of tags associated with this window.
      */
-    public tags: TagMap = {};
+    readonly tags: TagMap;
+
+}
+
+class BrowserWindowMetas {
+
+    public static create(tags: TagMap = {}): BrowserWindowMeta {
+
+        const id = new Latch<number>();
+        return {id, tags};
+    }
 
 }
 
@@ -58,10 +71,11 @@ export class BrowserWindowRegistry {
     }
 
     public static tag(id: ID, tags: TagMap) {
+
         this.gc();
 
         if (! (id in this.registry)) {
-            this.registry[`${id}`] = new BrowserWindowMeta();
+            this.registry[`${id}`] = BrowserWindowMetas.create(tags);
         }
 
         const meta = this.registry[`${id}`];
@@ -73,7 +87,7 @@ export class BrowserWindowRegistry {
     }
 
     /**
-     * Find a window ID with the given tag.
+     * Find a window IDs with the given tag.
      */
     public static tagged(tag: BrowserWindowTag): ID[] {
         this.gc();
@@ -103,7 +117,7 @@ export class BrowserWindowRegistry {
 
         const registryKeys = Object.keys(this.registry);
         const liveWindowIDs
-            = this.liveWindowsProvider.getLiveWindowIDs().map(current => current.toString())
+            = this.liveWindowsProvider.getLiveWindowIDs().map(current => current.toString());
 
         const allWindowIDs = Sets.union(registryKeys, liveWindowIDs);
 

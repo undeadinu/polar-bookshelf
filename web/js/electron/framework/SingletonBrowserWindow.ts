@@ -12,7 +12,7 @@ export class SingletonBrowserWindow {
 
     public static async getInstance(tag: BrowserWindowTag,
                                     browserWindowFactory: BrowserWindowFactory,
-                                    extraTags: TagMap = {}) {
+                                    extraTags: TagMap = {}): Promise<BrowserWindow> {
 
         const existing = BrowserWindowRegistry.tagged(tag);
 
@@ -28,6 +28,9 @@ export class SingletonBrowserWindow {
 
         }
 
+        // FIXME: there's a problem here in that there's a race here ... we need
+        // to acquire some sort of mutex lock per tag here before opening the
+        // window... ... but what do we do if the window is 'opening' ???
         const result = await browserWindowFactory();
 
         const tags: TagMap = Object.assign({}, extraTags);

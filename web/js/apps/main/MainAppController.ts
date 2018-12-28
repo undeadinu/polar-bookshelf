@@ -149,6 +149,16 @@ export class MainAppController {
 
             let window;
 
+            // FIXME : there are two things slowing us down here...
+            //
+            // 1. we're waiting until we load the document to return from the browserWindowFactory
+            //
+            // 2. we're waiting until the window is 'ready-to-show' which also slows us down from
+            //    getting the ID.
+            //
+            // 3. FIXME: the solution is probably to store a Latch<number> as the entry in the registry...
+            //   which we can immediately 'register' and then get() it when we return.
+
             if (newWindow) {
                 window = await MainAppBrowserWindowFactory.createWindow(BROWSER_WINDOW_OPTIONS, 'about:blank');
             } else {
